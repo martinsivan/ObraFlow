@@ -1,0 +1,448 @@
+Manual do ObraFlow(Obra no Fluxo) - Sistema de Ajuste de Materiais
+
+## Sumário
+
+1. [Introdução](#introdução)
+2. [Visão Geral do Sistema](#visão-geral-do-sistema)
+3. [Guias do Relatório](#guias-do-relatório)
+   - [Resumo](#resumo)
+   - [Obras Tipo M](#obras-tipo-m)
+   - [Obras Tipo D](#obras-tipo-d)
+   - [Obras com Falta](#obras-com-falta)
+   - [Obras com Excesso](#obras-com-excesso)
+   - [Redistribuições](#redistribuições)
+   - [Inconsistências](#inconsistências)
+   - [Aderência](#aderência) – “Maikon Bruno”
+4. [Lógica do Sistema](#lógica-do-sistema)
+   - [Identificação de Tipos de Obra](#identificação-de-tipos-de-obra)
+   - [Mapeamento de Materiais](#mapeamento-de-materiais)
+   - [Cálculo de Quantidades Previstas](#cálculo-de-quantidades-previstas)
+   - [Identificação de Faltas e Excessos](#identificação-de-faltas-e-excessos)
+   -[Algoritmo de Redistribuição](#algoritmo-de-redistribuição) “NºDiagrama: Rhaylson Ribeiro”
+   - [Análise de Aderência](#análise-de-aderência)
+5. [Código Fonte e Bibliotecas](#código-fonte-e-bibliotecas)
+   - [Estrutura do Código](#estrutura-do-código)
+   - [Bibliotecas Utilizadas](#bibliotecas-utilizadas)
+   - [Padrões de Projeto](#padrões-de-projeto)
+6. [Manutenção e Expansão](#manutenção-e-expansão)
+   - [Adição de Novos Materiais](#adição-de-novos-materiais)
+   - [Suporte a Novos Estados](#suporte-a-novos-estados)
+   - [Personalização de Kits](#personalização-de-kits)
+7. [Conclusão](#conclusão)
+1. [Introdução](#introdução)
+O ObraFlow é um sistema desenvolvido para otimizar o gerenciamento de materiais em obras de infraestrutura elétrica da Equatorial Energia. O sistema analisa dados de obras em andamento, identifica faltas e excessos de materiais, e propõe redistribuições eficientes para maximizar o aproveitamento dos recursos disponíveis. Não testar em Obras de Perdas, PLPT, Manutenção uma vez que foi criado exclusivamente pra Obras da STC
+
+2 - Baixar o Arquivo no link indicado
+
+3 - Extrair o arquivo no seu local preferido
+
+
+
+
+
+
+
+4 - Abrir a pasta ObraFlow
+
+
+
+5 - Executar o ícone da Aplicação
+
+
+
+6 - Seu antivírus poderá identificá-lo como vírus. Isso é normal por tratar-se de aplicação executável. Vá em mais configurações ou mais informações e click em executar assim mesmo. 
+
+
+
+
+
+
+7- Não delete esta pasta pois por se tratar de uma aplicação executável e não instalável; é necessário carregar todas as ferramentas utilizadas nesta aplicação. Fique à vontade pra explorá-la; inclusive a subpasta .Doc que tem a apresentação da aplicação, lista das melhorias, todas as bibliotecas python utilizadas e nem me lembro mais o que lá tem.
+
+
+8 – Segue a carinha da aplicação:
+
+
+
+
+
+
+
+
+
+
+
+ - A Aplicação ObraFlow(Obra no Fluxo) possui duas Guias uma sendo a tela Principal que de fato é analogicamente o Fiat Uno da aplicação e a guia Chat CJI3 que ainda está em desenvolvimento e que se não der muito certo; será descontinuada nas próximas versões. A intenção é substituir o Fiat Uno por uma Ferrari ou talvez uma  mais por enquanto ficaremos com o fusca mesmo
+- Nos campos Configuração de KIT fique à vontade para simular qual sua CJI3 pois com a simulação você conseguira identificar qual a melhor jogada na hora de distribuir os materiais
+- 
+
+
+
+
+
+Este manual detalha o funcionamento do sistema, a lógica por trás dos resultados apresentados, e fornece informações técnicas sobre o código fonte e as bibliotecas utilizadas.
+
+## Visão Geral do Sistema
+
+O ObraFlow é uma aplicação desktop desenvolvida em Python com interface gráfica moderna utilizando CustomTkinter. O sistema processa arquivos de entrada no formato Excel, especificamente relatórios CJI3 do SAP com a variante de exibição "/STC_COMS_2" e arquivos de status CN43N com o layout de exibição "/IVAN".
+*Os dois arquivos são obrigatórios.
+
+O fluxo básico de operação do sistema é:
+1. Carregamento dos arquivos de entrada (CJI3) e status (CN43N)
+	- Para a CJI3 favor utilizar a Variante de exibição:/STC_COMS_2
+	- Para a CN43N favor utilizar a Variação de exibição: /IVAN
+2. Processamento e análise dos dados
+3. Identificação de obras por tipo (M ou D)
+4. Detecção de faltas e excessos de materiais
+5. Cálculo de redistribuições otimizadas
+6. Geração de relatório detalhado em Excel
+
+O sistema opera em sete estados brasileiros onde a Equatorial Energia mantém operações: Maranhão, Pará, Piauí, Alagoas, Amapá, Rio Grande do Sul e Goiás.
+
+## Guias do Relatório
+
+O relatório gerado pelo ObraFlow contém diversas guias, cada uma fornecendo informações específicas sobre o estado das obras e materiais. A seguir, detalhamos cada uma dessas guias.
+
+### Resumo
+
+A guia "Resumo" apresenta uma visão consolidada da situação de materiais em todas as obras analisadas. Esta guia é dividida em três seções principais:
+
+- **EXCESSO**: Mostra os materiais disponíveis para redistribuição
+- **FALTA**: Apresenta as quantidades necessárias de cada material, separadas por tipo de obra (M/I e D)
+- **SALDO FINAL**: Exibe o balanço final após as redistribuições propostas
+
+A lógica por trás desta guia é calcular o saldo líquido de cada material após considerar todas as redistribuições possíveis. O sistema distribui proporcionalmente os excessos disponíveis entre as obras com falta.
+
+O saldo final é colorido automaticamente: verde para saldos positivos (excesso) e vermelho para saldos negativos (falta), facilitando a identificação visual de materiais críticos.
+
+### Obras Tipo M
+
+A guia "Obras Tipo "M"e/ou "I" lista todas as obras de Ativação (identificadas pela letra M ou I no código do Elemento PEP). Estas obras geralmente envolvem instalação ou substituição de medidores de energia.
+
+As colunas principais incluem:
+- Elemento PEP (identificador da obra)
+- Definição do projeto
+- Material
+- Texto breve de material
+- Quantidade total entrada
+- Categoria de material (após mapeamento)
+- Quantidade prevista (calculada com base nos kits configurados)
+
+Esta guia serve como referência para entender a distribuição de materiais nas obras de medição, que possuem requisitos específicos de materiais como medidores, lacres e terminais.
+
+### Obras Tipo D
+
+Similar à guia anterior, a "Obras Tipo D" lista todas as obras de desativação (identificadas pela letra D no código do Elemento PEP). Estas obras geralmente envolvem instalação ou manutenção de redes de distribuição.
+
+As obras tipo D possuem requisitos diferentes de materiais, com foco em cabos, conectores e alças. O sistema aplica regras específicas para calcular as quantidades previstas para este tipo de obra.
+
+### Obras com Falta
+
+Esta guia apresenta todas as obras que possuem quantidade de materiais abaixo do previsto pelos kits configurados. As informações são organizadas por:
+
+- Elemento PEP
+- Tipo de Serviço (INSTAL.MED, INSTAL.RAMAL, etc.)
+- Categoria de Material
+- Quantidade Existente (atual na obra)
+- Quantidade Aceitável (prevista pelo kit)
+- Quantidade Necessária (diferença a ser suprida)
+- Estado (localização geográfica da obra)
+
+A lógica de cálculo varia conforme o tipo de obra:
+- Para obras tipo M/I: Quant. Necessária = Quant. Aceitável - Quant. Existente
+- Para obras tipo D: Quant. Necessária = Quant. Aceitável + Quant. Existente
+
+Obras identificadas como "lixão" (através de padrões no código PEP) são automaticamente excluídas desta análise para evitar redistribuições desnecessárias.
+
+### Obras com Excesso
+
+Esta guia lista todas as obras que possuem quantidade de materiais acima do previsto pelos kits configurados. As informações são organizadas de forma similar à guia de faltas, mas com foco nos excessos:
+
+- Elemento PEP
+- Tipo de Serviço
+- Categoria de Material
+- Quantidade Existente
+- Quantidade Aceitável
+- Quantidade a Movimentar (excesso que pode ser redistribuído)
+- Estado
+
+O sistema identifica automaticamente obras com potencial para doação de materiais, considerando uma margem de segurança configurável para garantir que a obra doadora não fique desabastecida.
+
+### Redistribuições
+
+A guia "Redistribuições" apresenta as transferências de materiais sugeridas pelo sistema para otimizar a alocação de recursos. Cada linha representa uma transferência específica com as seguintes informações:
+
+- Obra Origem (doadora)
+- Obra Destino (receptora)
+- Material Simplificado (categoria do material)
+- Quantidade Transferida
+- Estado Origem
+- Estado Destino
+
+O algoritmo de redistribuição prioriza transferências dentro do mesmo estado para minimizar custos logísticos, e só sugere transferências interestaduais quando não há alternativa dentro do mesmo estado.
+
+### Inconsistências
+
+Esta guia identifica possíveis problemas nos dados das obras, como:
+
+- Obras sem serviços identificáveis
+- Materiais sem categoria definida
+- Quantidades anormalmente altas ou baixas
+- Combinações inválidas de serviços e materiais
+
+As inconsistências são classificadas por tipo e irregularidade, permitindo que os usuários identifiquem e corrijam problemas nos dados de origem antes de fazer qualquer movimentação baseadas no relatório.
+
+### Aderência - "PEDIDO DO MEU CHEFINHO" - Maikon Bruno
+
+A guia "Aderência" avalia o quanto cada obra está seguindo os kits padrão de materiais. O sistema calcula um percentual de aderência para cada obra e material, classificando-os em categorias:
+- **ÓTIMO**: Aderência de 90% a 110%
+- **BOM**: Aderência de 80% a 90% ou 110% a 120%
+- **REGULAR**: Aderência de 70% a 80% ou 120% a 130%
+- **CRÍTICO**: Aderência abaixo de 70% ou acima de 130%
+
+Esta análise ajuda a identificar padrões de consumo anormais e possíveis oportunidades de ajuste nos kits padrão.
+
+## Lógica do Sistema
+
+### Identificação de Tipos de Obra
+
+O sistema identifica o tipo de obra através de padrões no código do Elemento PEP:
+
+```python
+def identificar_tipo_obra(self, elemento_pep):
+    try:
+        if pd.isna(elemento_pep):
+            return None
+        
+        elemento_str = str(elemento_pep).upper() " Contexto: Converte o valor da variável elemento_pep para string (texto), caso não seja.
+        
+        # Verificações múltiplas para identificação do tipo de obra
+        if any(marca in elemento_str for marca in ['.M', '-M-', '_M_', '.I', '-I-','_I_']):
+            return "M"
+        elif any(marca in elemento_str for marca in ['.D', '-D-', '_D_']):
+            return "D"
+        
+        return None
+    except Exception as e:
+        print(f"Erro ao identificar tipo de obra para {elemento_pep}: {e}")
+        return None
+```
+
+Obras tipo M (Medição) ou I (Instalação) seguem um padrão de kit diferente das obras tipo D (Desativação), o que influencia diretamente os cálculos de quantidades previstas e identificação de faltas/excessos.
+
+### Mapeamento de Materiais
+
+O sistema utiliza um algoritmo(ideia) sofisticado de mapeamento para categorizar os materiais a partir de suas descrições textuais. Este mapeamento é útil para padronizar a análise, já que os mesmos materiais podem ter descrições ligeiramente diferentes nos registros:
+
+```python
+def mapear_material_combinado(self, texto):
+    # Verificar se o texto é None ou vazio
+    if pd.isna(texto) or texto == '':
+        return "OUTROS"
+    
+    # Conversão para maiúsculas
+    texto_upper = str(texto).upper()
+    
+    # Mapeamentos expandidos com prioridade e precisão
+    categorias = {
+        'MEDIDOR': ['MED ELET', 'MED', 'MEDIDOR', ...],
+        'CABO': ['CABO', 'CONDUTOR', 'FIO', ...],
+        # Outras categorias...
+    }
+    
+    # Verificações e lógica de mapeamento...
+    
+    return categoria_identificada
+```
+
+O algoritmo utiliza técnicas de correspondência de padrões e priorização de categorias para garantir um mapeamento consistente mesmo com variações nas descrições.
+
+### Cálculo de Quantidades Previstas
+
+As quantidades previstas são calculadas com base em kits predefinidos para cada tipo de serviço:
+
+```python
+self.default_service_material_ratio = {
+    "INSTAL.MED": {
+        "MEDIDOR": 1,
+        "LACRE": 2,
+        "TERMINAL": 4
+    },
+    "INSTAL.RAMAL": {
+        "CABO": 15,
+        "ALCA": 2,
+        "CONECTOR": 3
+    },
+    "RETIRADA.MED": {
+        "MEDIDOR": -1  # Valor negativo pois é retirada
+    },
+    "RETIRADA.RAMAL": {
+        "CABO": -10  # Valor negativo pois é retirada
+    }
+}
+```
+
+Estes kits definem as proporções esperadas de materiais para cada tipo de serviço. Por exemplo, para cada instalação de medidor, espera-se 1 medidor, 2 lacres e 4 terminais. Os valores negativos para serviços de retirada indicam que o material deve sair do estoque da obra.
+
+### Identificação de Faltas e Excessos
+
+O sistema compara as quantidades existentes com as quantidades previstas para identificar faltas e excessos:
+
+```python
+# Verificar falta ou excesso
+if qtd_existente < qtd_aceitavel:
+    # Falta material
+    obras_com_falta_lista.append({
+        'Elemento PEP': obra,
+        'Tipo_Servico': tipo_servico,
+        'Categoria_Material': material,
+        'Quant. Existente': qtd_existente,
+        'Quant. Aceitavel': qtd_aceitavel,
+        'Quant. Necessaria': quant_necessaria,
+        'Estado': estados_obras.get(obra, 'OUTROS')
+    })
+elif qtd_existente > qtd_aceitavel:
+    # Excesso de material
+    obras_com_excesso_lista.append({
+        'Elemento PEP': obra,
+        'Tipo_Servico': tipo_servico,
+        'Categoria_Material': material,
+        'Quant. Existente': qtd_existente,
+        'Quant. Aceitavel': qtd_aceitavel,
+        'Quant. a Movimentar': qtd_existente - qtd_aceitavel,
+        'Estado': estados_obras.get(obra, 'OUTROS')
+    })
+```
+
+O sistema aplica regras específicas para cada tipo de obra e considera fatores como o estado da obra e se ela é classificada como "lixão" (obras que não devem entrar na análise de faltas).
+
+### Algoritmo de Redistribuição
+
+O algoritmo de redistribuição busca otimizar a transferência de materiais entre obras com excesso e obras com falta:
+
+1. Agrupa obras com falta e excesso por estado e material
+2. Prioriza redistribuições dentro do mesmo estado
+3. Gera uma lista de redistribuições recomendadas
+
+O sistema considera o fator:
+- Quantidade disponível na obra doadora
+
+### Análise de Aderência
+
+A análise de aderência avalia o quanto cada obra está seguindo os kits padrão:
+
+```python
+# Calcular percentual de aderência
+aderencia_percentual = (qtd_existente / qtd_aceitavel) * 100 if qtd_aceitavel > 0 else 0
+
+# Classificar status de aderência
+if 90 <= aderencia_percentual <= 110:
+    status = "ÓTIMO"
+elif 80 <= aderencia_percentual < 90 or 110 < aderencia_percentual <= 120:
+    status = "BOM"
+elif 70 <= aderencia_percentual < 80 or 120 < aderencia_percentual <= 130:
+    status = "REGULAR"
+else:
+    status = "CRÍTICO"
+```
+Esta análise ajuda a identificar padrões de consumo anormais e possíveis oportunidades de ajuste nos kits padrão.
+
+## Código Fonte e Bibliotecas
+
+### Estrutura do Código
+
+O código do ObraFlow segue uma estrutura orientada a objetos com a classe principal `App` que herda de `ctk.CTk` (CustomTkinter). As principais seções do código são:
+
+1. **Inicialização e Interface Gráfica**: Configuração da janela, widgets e elementos visuais
+2. **Funções de Processamento de Dados**: Mapeamento, cálculos e análises
+3. **Funções de Geração de Relatório**: Formatação e exportação para Excel
+4. **Funções Auxiliares**: Utilitários para manipulação de dados e validações
+
+O código utiliza padrões de projeto como:
+- **Encapsulamento**: Agrupando dados e métodos relacionados
+- **Herança**: Estendendo a classe base CTk
+- **Composição**: Utilizando widgets e frames para construir a interface
+
+### Bibliotecas Utilizadas
+
+O ObraFlow utiliza diversas bibliotecas Python para suas funcionalidades:
+
+- **CustomTkinter**: Framework moderno para interfaces gráficas, baseado no Tkinter
+- **Pandas**: Manipulação e análise de dados tabulares
+- **NumPy**: Operações numéricas e matriciais
+- **Pillow (PIL)**: Processamento de imagens para os ícones e logos
+- **XlsxWriter**: Geração de relatórios Excel com formatação avançada
+- **OpenPyXL**: Manipulação de arquivos Excel
+- **PyXLSB**: Suporte a arquivos Excel binários (.xlsb)
+- **FuzzyWuzzy**: Correspondência aproximada de strings para mapeamento de materiais
+- **Python-Levenshtein**: Acelerador para algoritmos de distância de string
+
+A instalação das dependências é gerenciada através do arquivo `requirements.txt`:
+
+```
+customtkinter>=5.2.0
+tk>=0.1.0
+Pillow>=10.0.0
+pandas>=2.0.0
+xlsxwriter>=3.1.0
+openpyxl>=3.1.0
+ollama>=0.1.0
+fuzzywuzzy>=0.18.0
+python-Levenshtein>=0.21.0
+```
+
+### Padrões de Projeto
+
+O ObraFlow implementa diversos padrões de projeto e boas práticas de programação:
+
+- **Tratamento de Exceções**: Captura e tratamento adequado de erros
+- **Logging**: Registro de operações e erros para depuração
+- **Otimização de Performance**: Uso de vetorização e estruturas de dados eficientes
+- **Interface Responsiva**: Adaptação a diferentes tamanhos de tela
+- **Separação de Responsabilidades**: Funções específicas para cada tarefa
+
+## Manutenção e Expansão
+
+### Adição de Novos Materiais
+
+Para adicionar novos materiais ao sistema, é necessário atualizar o dicionário de categorias na função `mapear_material_combinado` e, se necessário, adicionar o material aos kits em `default_service_material_ratio`.
+
+### Suporte a Novos Estados
+
+Para adicionar suporte a um novo estado, é necessário:
+
+1. Adicionar a bandeira do estado na pasta `imagens`
+2. Incluir o nome do arquivo na lista `logos`
+3. Atualizar o dicionário de estados na função `identificar_estado_obra`
+4. Adicionar as distâncias do novo estado para os existentes na matriz de distâncias
+
+### Personalização de Kits
+
+Os kits de materiais podem ser personalizados através da interface gráfica, ajustando as quantidades para cada tipo de serviço. Estas configurações são aplicadas apenas para a sessão atual, mas podem ser salvas como padrão modificando o dicionário `default_service_material_ratio`.
+
+## Conclusão
+
+O ObraFlow é uma ferramenta poderosa para otimização da gestão de materiais em obras de infraestrutura elétrica. Através de sua análise detalhada e sugestões de redistribuição, o sistema permite:
+
+- Redução de custos com compras desnecessárias
+- Minimização de atrasos por falta de materiais
+- Otimização da logística de transferência
+- Padronização do consumo de materiais
+- Identificação de inconsistências nos dados
+
+O sistema continua em evolução, com melhorias constantes em seu algoritmo de mapeamento, cálculos de redistribuição e interface de usuário. Sugestões e contribuições são sempre bem-vindas para tornar o ObraFlow ainda mais eficiente e útil para a gestão de obras da Equatorial Energia.
+
+---
+
+*Desenvolvido com ❤️ por Ivan Martins (AprendiZ.py)*
+*Primeira versão 1.1-31/12/2024*
+*Primeira Distribuição: 07/05/2025
+Primeiros Filhos Escolhidos:
+- Jeova Melo
+- Rhaylson Ribeiro
+
+
+
+
+
+
